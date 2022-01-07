@@ -90,7 +90,7 @@ namespace unittests
 	add_device(dev2);
       }
 
-      void TearDown() override
+      virtual void TearDown()
       {
 	remove_device(dev);
 	remove_device(dev2);

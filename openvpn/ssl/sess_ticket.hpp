@@ -102,10 +102,10 @@ namespace openvpn {
 	h(value_, SIZE);
       }
 
-#ifdef USE_OPENVPN_HASH
+#ifdef HAVE_CITYHASH
       std::size_t hashval() const
       {
-	Hash64 h;
+	HashSizeT h;
 	hash(h);
 	return h.value();
       }
@@ -237,6 +237,6 @@ namespace openvpn {
   };
 }
 
-#ifdef USE_OPENVPN_HASH
+#ifdef HAVE_CITYHASH
 OPENVPN_HASH_METHOD(openvpn::TLSSessionTicketBase::Name, hashval);
 #endif

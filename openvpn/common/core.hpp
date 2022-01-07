@@ -22,9 +22,8 @@
 // Linux methods for enumerating the number of cores on machine,
 // and binding a thread to a particular core.
 
-#pragma once
-
-#include <thread>
+#ifndef OPENVPN_COMMON_CORE_H
+#define OPENVPN_COMMON_CORE_H
 
 #include <openvpn/common/platform.hpp>
 
@@ -67,3 +66,5 @@ namespace openvpn {
   }
 
 }
+
+#endif

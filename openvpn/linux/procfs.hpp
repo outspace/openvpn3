@@ -1,22 +1,19 @@
 // Private Gateway
-// Copyright (C) 2012-2020 OpenVPN Technologies, Inc.
+// Copyright (C) 2012-2017 OpenVPN Technologies, Inc.
 // All rights reserved
 
-#pragma once
-
-//#define OPENVPN_PROCFS_DEBUG
+#ifndef OPENVPN_LINUX_PROCFS_H
+#define OPENVPN_LINUX_PROCFS_H
 
 #include <string>
 
-#include <openvpn/common/string.hpp>
 #include <openvpn/common/exception.hpp>
-#include <openvpn/common/fileunix.hpp>
+#include <openvpn/common/file.hpp>
 #include <openvpn/common/sleep.hpp>
 #include <openvpn/common/stat.hpp>
 #include <openvpn/common/format.hpp>
 #include <openvpn/common/action.hpp>
 #include <openvpn/common/stop.hpp>
-#include <openvpn/buffer/bufstr.hpp>
 
 namespace openvpn {
 
@@ -55,6 +52,8 @@ namespace openvpn {
 
     static void write_sys(const std::string& fn, const std::string& text, Stop* async_stop=nullptr)
     {
+      //OPENVPN_LOG(to_string(fn, text));
+
       const unsigned int n_retries = 200;
       const unsigned int milliseconds_per_retry = 100;
       volatile bool stop = false;
@@ -68,30 +67,7 @@ namespace openvpn {
 	{
 	  if (file_exists(fn))
 	    {
-	      try {
-		OPENVPN_LOG("ProcFS: " << fn << " -> '" << string::trim_crlf_copy(text) << '\'');
-		write_text_unix(fn, 0777, 0, text);
-	      }
-	      catch (const std::exception& e)
-		{
-		  OPENVPN_LOG("ProcFS exception: " << e.what());
-		}
-#ifdef OPENVPN_PROCFS_DEBUG
-	      sleep_milliseconds(100);
-	      std::string text_verify;
-	      BufferAllocated buf(256, 0);
-	      const int status = read_binary_unix_fast(fn, buf);
-	      if (status)
-		{
-		  text_verify = strerror_str(status);
-		}
-	      else
-		{
-		  string::trim_crlf(buf);
-		  text_verify = buf_to_string(buf);
-		}
-	      OPENVPN_LOG("WRITE_SYS verify fn=" << fn << " text=" << string::trim_crlf_copy(text) << " verify=" << text_verify);
-#endif
+	      write_string(fn, text);
 	      return;
 	    }
 	  sleep_milliseconds(milliseconds_per_retry);
@@ -99,7 +75,7 @@ namespace openvpn {
       if (stop)
 	OPENVPN_THROW(procfs_error, "file " << fn << " : aborting write attempt due to stop signal");
       else
-	OPENVPN_THROW(procfs_error, "file " << fn << " failed to appear within " << (n_retries * milliseconds_per_retry / 1000) << " seconds");
+	OPENVPN_THROW(procfs_error, "file " << fn << " failed to exist within " << (n_retries * milliseconds_per_retry / 1000) << " seconds");
     }
 
   private:
@@ -128,3 +104,5 @@ namespace openvpn {
     }
   };
 }
+
+#endif

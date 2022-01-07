@@ -50,7 +50,7 @@ namespace openvpn {
     {
     }
 
-    virtual void reopen() override
+    virtual void reopen() const override
     {
       try {
 	// open redirection log file, but don't redirect yet

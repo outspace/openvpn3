@@ -136,7 +136,7 @@ namespace openvpn {
     {
       const size_t s = data.size();
       if (s < n)
-	OPENVPN_THROW(option_error, err_ref() << " must have at least " << (n - 1) << " arguments");
+	OPENVPN_THROW(option_error, err_ref() << " must have at least " << n << " arguments");
     }
 
     void exact_args(const size_t n) const
@@ -215,7 +215,7 @@ namespace openvpn {
     T get_num(const size_t idx) const
     {
       typedef typename std::remove_const<T>::type T_nonconst;
-      T_nonconst n(0); // we shouldn't need to initialize here, but some compilers complain "may be used uninitialized in this function"
+      T_nonconst n;
       const std::string& numstr = get(idx, 64);
       if (numstr.length() >= 2 && numstr[0] == '0' && numstr[1] == 'x')
 	{
@@ -260,17 +260,14 @@ namespace openvpn {
       size_t max_len_flags = (flags & RENDER_TRUNC_64) ? 64 : 0;
       if (flags & RENDER_PASS_FMT)
 	max_len_flags |= Unicode::UTF8_PASS_FMT;
-      bool first = true;
       for (std::vector<std::string>::const_iterator i = data.begin(); i != data.end(); ++i)
 	{
-	  if (!first)
-	    out << ' ';
 	  if (flags & RENDER_BRACKET)
 	    out << '[';
 	  out << Unicode::utf8_printable(*i, max_len_flags);
 	  if (flags & RENDER_BRACKET)
 	    out << ']';
-	  first = false;
+	  out << ' ';
 	}
       return out.str();
     }
@@ -292,14 +289,14 @@ namespace openvpn {
 
     // Render the option args into a string format such that it could be parsed back to
     // the equivalent option args.
-    std::string escape(const bool csv) const
+    std::string escape() const
     {
       std::ostringstream out;
       bool more = false;
       for (std::vector<std::string>::const_iterator i = data.begin(); i != data.end(); ++i)
 	{
 	  const std::string& term = *i;
-	  const bool must_quote = must_quote_string(term, csv);
+	  const bool must_quote = string::contains_space(term);
 	  if (more)
 	    out << ' ';
 	  escape_string(out, term, must_quote);
@@ -379,18 +376,6 @@ namespace openvpn {
     void range_error(const size_t idx, const T min_value, const T max_value) const
     {
       OPENVPN_THROW(option_error, err_ref() << '[' << idx << "] must be in the range [" << min_value << ',' << max_value << ']');
-    }
-
-    bool must_quote_string(const std::string& str, const bool csv) const
-    {
-      for (const auto c : str)
-	{
-	  if (string::is_space(c))
-	    return true;
-	  if (csv && c == ',')
-	    return true;
-	}
-      return false;
     }
 
     volatile mutable bool touched_ = false;
@@ -695,7 +680,7 @@ namespace openvpn {
     }
 
     template<typename T, typename... Args>
-    explicit OptionList(T first, Args... args)
+    OptionList(T first, Args... args)
     {
       reserve(1 + sizeof...(args));
       from_list(std::move(first), std::forward<Args>(args)...);
@@ -707,13 +692,6 @@ namespace openvpn {
       OptionList ret;
       ret.parse_from_csv(str, lim);
       ret.update_map();
-      return ret;
-    }
-
-    static OptionList parse_from_csv_static_nomap(const std::string& str, Limits* lim)
-    {
-      OptionList ret;
-      ret.parse_from_csv(str, lim);
       return ret;
     }
 
@@ -1311,20 +1289,6 @@ namespace openvpn {
 	    }
 	}
       return out.str();
-    }
-
-    std::string render_csv() const
-    {
-      std::string ret;
-      bool first = true;
-      for (auto &e : *this)
-	{
-	  if (!first)
-	    ret += ',';
-	  ret += e.escape(true);
-	  first = false;
-	}
-      return ret;
     }
 
     // Render contents of hash map used to locate options after underlying option list

@@ -53,7 +53,6 @@ namespace openvpn {
       bool server_addr_float;
       Frame::Ptr frame;
       SessionStats::Ptr stats;
-      SocketProtect* socket_protect = nullptr;
     };
 
     struct TunConfig

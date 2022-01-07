@@ -19,12 +19,13 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-// Client-side code to handle pushed option list "continuations".
-// This is where multiple option lists are pushed by the server,
-// if an option list doesn't fit into the standard 1024 byte buffer.
-// This class will aggregate the options.
+// Handle pushed option list "continuations".  This is where multiple
+// option lists are pushed by the server, if an option list doesn't fit
+// into the standard 1024 byte buffer.  This class will aggregate the
+// options.
 
-#pragma once
+#ifndef OPENVPN_OPTIONS_CONTINUATION_H
+#define OPENVPN_OPTIONS_CONTINUATION_H
 
 #include <openvpn/common/exception.hpp>
 #include <openvpn/common/options.hpp>
@@ -47,16 +48,14 @@ namespace openvpn {
     OPENVPN_SIMPLE_EXCEPTION(olc_complete); // add called when object is already complete
 
     OptionListContinuation(const PushOptionsBase::Ptr& push_base_arg)
-      : push_base(push_base_arg)
+      : partial_(false),
+	complete_(false),
+	push_base(push_base_arg)
     {
       // Prepend from base where multiple options of the same type can aggregate,
       // so that server-pushed options will be at the end of list.
       if (push_base)
 	extend(push_base->multi, nullptr);
-    }
-
-    OptionListContinuation()
-    {
     }
 
     // call with option list fragments
@@ -96,10 +95,12 @@ namespace openvpn {
       return o && o->size() >= 2 && o->ref(1) == "2";
     }
 
-    bool partial_ = false;
-    bool complete_ = false;
+    bool partial_;
+    bool complete_;
 
     PushOptionsBase::Ptr push_base;
   };
 
-}
+} // namespace openvpn
+
+#endif // OPENVPN_OPTIONS_CONTINUATION_H

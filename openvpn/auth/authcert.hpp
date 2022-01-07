@@ -26,7 +26,6 @@
 #include <vector>
 #include <sstream>
 #include <cstring>
-#include <cstdint>
 #include <memory>
 #include <utility>
 
@@ -230,7 +229,7 @@ namespace openvpn {
 	return cn;
       }
 
-      std::int64_t get_sn() const
+      long get_sn() const
       {
 	return sn;
       }
@@ -270,12 +269,10 @@ namespace openvpn {
 	  return "OK";
       }
 
-#ifndef UNIT_TEST
     private:
-#endif
       std::string sni;               // SNI (server name indication)
       std::string cn;                // common name
-      std::int64_t sn;               // serial number
+      long sn;                       // serial number
       unsigned char issuer_fp[20];   // issuer cert fingerprint
 
       std::unique_ptr<Fail> fail;

@@ -36,9 +36,10 @@ int main (int argc, char **argv)
 {
   testLog = new openvpn::LogOutputCollector();
   ::testing::InitGoogleTest (&argc, argv);
-  openvpn::InitProcess::Init init;
+  openvpn::InitProcess::init();
   auto ret = RUN_ALL_TESTS ();
 
+  openvpn::InitProcess::uninit();
   delete testLog;
   return ret;
 }

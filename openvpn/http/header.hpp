@@ -84,7 +84,7 @@ namespace openvpn {
 	if (h)
 	  return h->value;
 	else
-	  return std::string();
+	  return "";
       }
 
       std::string get_value_trim(const std::string& key) const

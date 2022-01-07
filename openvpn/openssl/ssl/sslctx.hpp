@@ -27,7 +27,6 @@
 
 #include <string>
 #include <cstring>
-#include <cstdint>
 #include <sstream>
 #include <utility>
 
@@ -74,8 +73,6 @@
 #include <openvpn/openssl/pki/x509certinfo.hpp>
 #include <openvpn/openssl/bio/bio_memq_stream.hpp>
 #include <openvpn/openssl/ssl/sess_cache.hpp>
-#include <openvpn/openssl/ssl/tlsver.hpp>
-
 
 #ifdef HAVE_JSON
 #include <openvpn/common/jsonhelper.hpp>
@@ -687,11 +684,6 @@ namespace openvpn {
 	return ssl_handshake_details(ssl);
       }
 
-      virtual bool export_keying_material(const std::string& label, unsigned char *dest, size_t size) override
-      {
-         return SSL_export_keying_material(ssl, dest, size, label.c_str(), label.size(), nullptr, 0, 0) == 1;
-      }
-
       // Return true if we did a full SSL handshake/negotiation.
       // Return false for cached, reused, or persisted sessions.
       // Also returns false if previously called on this session.
@@ -865,7 +857,7 @@ namespace openvpn {
 
 	    // save the leaf cert serial number
 	    const ASN1_INTEGER *ai = X509_get_serialNumber(cert);
-	    authcert->sn = extract_serial_number(ai);
+	    authcert->sn = ai ? ASN1_INTEGER_get(ai) : -1;
 
 	    X509_free (cert);
 	  }
@@ -1182,12 +1174,7 @@ namespace openvpn {
 		  sslopt |= SSL_OP_NO_TICKET;
 		}
 	    }
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-	if (config->tls_version_min > TLSVersion::V1_0)
-	  {
-	    SSL_CTX_set_min_proto_version(ctx, TLSVersion::toTLSVersion(config->tls_version_min));
-	  }
-#else
+
 	  if (config->tls_version_min > TLSVersion::V1_0)
 	    sslopt |= SSL_OP_NO_TLSv1;
 #ifdef SSL_OP_NO_TLSv1_1
@@ -1201,7 +1188,6 @@ namespace openvpn {
 #ifdef SSL_OP_NO_TLSv1_3
 	  if (config->tls_version_min > TLSVersion::V1_3)
 	    sslopt |= SSL_OP_NO_TLSv1_3;
-#endif
 #endif
 	  SSL_CTX_set_options(ctx, sslopt);
 
@@ -1249,7 +1235,8 @@ namespace openvpn {
 	  SSL_CTX_set_ecdh_auto(ctx, 1); // this method becomes a no-op in OpenSSL 1.1
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	  /* HAVE_SSL_CTX_SET_SECURITY_LEVEL exists from OpenSSL-1.1.0 up */
+#ifdef HAVE_SSL_CTX_SET_SECURITY_LEVEL
 	  switch(TLSCertProfile::default_if_undef(config->tls_cert_profile))
 	  {
 	  case TLSCertProfile::UNDEF:
@@ -1380,11 +1367,7 @@ namespace openvpn {
     {
       return config->mode;
     }
-
-    constexpr static bool support_key_material_export()
-    {
-      return true;
-    }
+ 
   private:
     // ns-cert-type verification
 
@@ -1597,22 +1580,9 @@ namespace openvpn {
 	}
     }
 
-    static std::int64_t extract_serial_number(const ASN1_INTEGER *ai)
-    {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-      std::int64_t ret;
-      if (ASN1_INTEGER_get_int64(&ret, ai) == 0)
-	return -1;
-      return ret;
-#else
-      return ai ? ASN1_INTEGER_get(ai) : -1;
-#endif
-    }
-
     static std::string cert_status_line(int preverify_ok,
 					int depth,
 					int err,
-					const std::string& signature,
 					const std::string& subject)
     {
       std::string ret;
@@ -1629,7 +1599,6 @@ namespace openvpn {
 	ret += subject;
       else
 	ret += "NO_SUBJECT";
-      ret += ", signature: " + signature;
       if (!preverify_ok)
 	{
 	  ret += " [";
@@ -1651,25 +1620,6 @@ namespace openvpn {
 	}
     }
 
-
-    static int check_cert_warnings(const X509* cert)
-    {
-      int nid = X509_get_signature_nid(cert);
-
-      switch (nid) {
-        case NID_ecdsa_with_SHA1:
-	case NID_dsaWithSHA:
-	case NID_dsaWithSHA1:
-	case NID_sha1WithRSAEncryption:
-	  return SSLAPI::TLS_WARN_SIG_SHA1;
-	case NID_md5WithRSA:
-	case NID_md5WithRSAEncryption:
-	  return SSLAPI::TLS_WARN_SIG_MD5;
-	default:
-	  return SSLAPI::TLS_WARN_NONE;
-      }
-    }
-
     static int verify_callback_client(int preverify_ok, X509_STORE_CTX *ctx)
     {
       // get the OpenSSL SSL object
@@ -1677,9 +1627,6 @@ namespace openvpn {
 
       // get OpenSSLContext
       const OpenSSLContext* self = (OpenSSLContext*) SSL_get_ex_data (ssl, SSL::context_data_index);
-
-      // get OpenSSLContext::SSL
-      SSL* self_ssl = (SSL *) SSL_get_ex_data (ssl, SSL::ssl_data_index);
 
       // get depth
       const int depth = X509_STORE_CTX_get_error_depth(ctx);
@@ -1689,13 +1636,8 @@ namespace openvpn {
 
       // log subject
       const std::string subject = OpenSSLPKI::x509_get_subject(current_cert);
-      auto signature = OpenSSLPKI::x509_get_signature_algorithm(current_cert);
       if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
-	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, X509_STORE_CTX_get_error(ctx),
-				 signature, subject));
-
-      // Add warnings if Cert parameters are wrong
-      self_ssl->tls_warnings |= self->check_cert_warnings(current_cert);
+	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, X509_STORE_CTX_get_error(ctx), subject));
 
       // leaf-cert verification
       if (depth == 0)
@@ -1784,9 +1726,7 @@ namespace openvpn {
 
       // log subject
       if (self->config->flags & SSLConst::LOG_VERIFY_STATUS)
-	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err,
-				  OpenSSLPKI::x509_get_subject(current_cert),
-				  OpenSSLPKI::x509_get_signature_algorithm(current_cert)));
+	OPENVPN_LOG_SSL(cert_status_line(preverify_ok, depth, err, OpenSSLPKI::x509_get_subject(current_cert)));
 
       // record cert error in authcert
       if (!preverify_ok && self_ssl->authcert)
@@ -1839,7 +1779,7 @@ namespace openvpn {
 
 	      // save the leaf cert serial number
 	      const ASN1_INTEGER *ai = X509_get_serialNumber(current_cert);
-	      self_ssl->authcert->sn =  extract_serial_number(ai);
+	      self_ssl->authcert->sn = ai ? ASN1_INTEGER_get(ai) : -1;
 	    }
 	}
 

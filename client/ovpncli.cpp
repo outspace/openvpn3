@@ -259,19 +259,14 @@ namespace openvpn {
 	parent = parent_arg;
       }
 
-      void set_rg_local(bool rg_local_arg)
-      {
-        rg_local = rg_local_arg;
-      }
-
       bool socket_protect(int socket, IP::Addr endpoint) override
       {
 	if (parent)
 	  {
 #if defined(OPENVPN_COMMAND_AGENT) && defined(OPENVPN_PLATFORM_WIN)
-	    return rg_local ? true : WinCommandAgent::add_bypass_route(endpoint);
+	    return WinCommandAgent::add_bypass_route(endpoint);
 #elif defined(OPENVPN_COMMAND_AGENT) && defined(OPENVPN_PLATFORM_MAC)
-	    return rg_local ? true : UnixCommandAgent::add_bypass_route(endpoint);
+	    return UnixCommandAgent::add_bypass_route(endpoint);
 #else
 	    return parent->socket_protect(socket, endpoint.to_string(), endpoint.is_ipv6());
 #endif
@@ -287,7 +282,6 @@ namespace openvpn {
 
     private:
       OpenVPNClient* parent;
-      bool rg_local = false; // do not add bypass route if true
     };
 
     class MyReconnectNotify : public ReconnectNotify
@@ -466,10 +460,6 @@ namespace openvpn {
 	bool dco = false;
 	bool echo = false;
 	bool info = false;
-	bool pt = false;
-
-	// Ensure that init is called
-	InitProcess::Init init;
 
 	template <typename SESSION_STATS, typename CLIENT_EVENTS>
 	void attach(OpenVPNClient* parent,
@@ -501,8 +491,6 @@ namespace openvpn {
 
 	  // socket protect
 	  socket_protect.set_parent(parent);
-	  RedirectGatewayFlags rg_flags{ options };
-	  socket_protect.set_rg_local(rg_flags.redirect_gateway_local());
 
 	  // reconnect notifications
 	  reconnect_notify.set_parent(parent);
@@ -605,6 +593,16 @@ namespace openvpn {
 	std::atomic<bool> foreign_thread_ready{false};
       };
     };
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::init_process()
+    {
+      InitProcess::init();
+    }
+
+    OPENVPN_CLIENT_EXPORT void OpenVPNClient::uninit_process()
+    {
+      InitProcess::uninit();
+    }
 
     OPENVPN_CLIENT_EXPORT OpenVPNClient::OpenVPNClient()
     {
@@ -711,7 +709,6 @@ namespace openvpn {
 	state->alt_proxy = config.altProxy;
 	state->dco = config.dco;
 	state->echo = config.echo;
-	state->pt = config.usePluggableTransports;
 	state->info = config.info;
 	state->clock_tick_ms = config.clockTickMS;
 	if (!config.gremlinConfig.empty())
@@ -1003,11 +1000,6 @@ namespace openvpn {
 #endif
 #if defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       cc.extern_tun_factory = this;
-#endif
-#if defined(OPENVPN_PLUGGABLE_TRANSPORTS)
-      if (state->pt) {
-        cc.pluggable_transports_factory = this;
-      }
 #endif
 #if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
       cc.extern_transport_factory = this;
@@ -1412,10 +1404,8 @@ namespace openvpn {
 #ifdef PRIVATE_TUNNEL_PROXY
       ret += " PT_PROXY";
 #endif
-#ifdef ENABLE_KOVPN
-      ret += " KOVPN";
-#elif ENABLE_OVPNDCO
-      ret += " OVPN-DCO";
+#ifdef ENABLE_DCO
+      ret += " DCO";
 #endif
 #ifdef OPENVPN_GREMLIN
       ret += " GREMLIN";

@@ -22,7 +22,8 @@
 // A set of lexical analyzer classes.  These classes can be combined
 // with the methods in split.hpp to create parsers.
 
-#pragma once
+#ifndef OPENVPN_COMMON_LEX_H
+#define OPENVPN_COMMON_LEX_H
 
 #include <openvpn/common/string.hpp>
 
@@ -42,18 +43,18 @@ namespace openvpn {
   class StandardLex
   {
   public:
+    StandardLex() : in_quote_(false), backslash(false), ch(-1) {}
+
     void put(char c)
     {
-      in_backslash_ = false;
-      if (backslash_)
+      if (backslash)
 	{
 	  ch = c;
-	  backslash_ = false;
-	  in_backslash_ = true;
+	  backslash = false;
 	}
       else if (c == '\\')
 	{
-	  backslash_ = true;
+	  backslash = true;
 	  ch = -1;
 	}
       else if (c == '\"')
@@ -62,7 +63,9 @@ namespace openvpn {
 	  ch = -1;
 	}
       else
-	ch = c;
+	{
+	  ch = c;
+	}
     }
 
     bool available() const { return ch != -1; }
@@ -70,13 +73,11 @@ namespace openvpn {
     void reset() { ch = -1; }
 
     bool in_quote() const { return in_quote_; }
-    bool in_backslash() const { return in_backslash_; }
 
   private:
-    bool in_quote_ = false;
-    bool backslash_ = false;
-    bool in_backslash_ = false;
-    int ch = -1;
+    bool in_quote_;
+    bool backslash;
+    int ch;
   };
 
   // A null lexical analyzer has no special understanding
@@ -84,15 +85,18 @@ namespace openvpn {
   class NullLex
   {
   public:
+    NullLex() : ch(-1) {}
+
     void put(char c) { ch = c; }
     bool available() const { return ch != -1; }
     int get() const { return ch; }
     void reset() { ch = -1; }
     bool in_quote() const { return false; }
-    bool in_backslash() const { return false; }
 
   private:
-    int ch = -1;
+    int ch;
   };
 
 } // namespace openvpn
+
+#endif // OPENVPN_COMMON_LEX_H

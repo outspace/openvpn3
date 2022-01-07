@@ -66,11 +66,6 @@
 #include <openvpn/client/cliemuexr.hpp>
 #endif
 
-#if defined(OPENVPN_PLUGGABLE_TRANSPORTS)
-#include <openvpn/transport/client/pluggable/fw.hpp>
-#include <openvpn/transport/client/pluggable/ptcli.hpp>
-#endif
-
 #if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
 #include <openvpn/transport/client/extern/config.hpp>
 #include <openvpn/transport/client/extern/fw.hpp>
@@ -105,7 +100,7 @@
 #include <openvpn/pt/ptproxy.hpp>
 #endif
 
-#if defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO)
+#if defined(ENABLE_DCO)
 #include <openvpn/dco/dcocli.hpp>
 #endif
 
@@ -176,10 +171,6 @@ namespace openvpn {
       ExternalTun::Factory* extern_tun_factory = nullptr;
 #endif
 
-#ifdef OPENVPN_PLUGGABLE_TRANSPORTS
-      PluggableTransports::Factory* pluggable_transports_factory = nullptr;
-#endif
-
 #if defined(OPENVPN_EXTERNAL_TRANSPORT_FACTORY)
       ExternalTransport::Factory* extern_transport_factory = nullptr;
 #endif
@@ -211,9 +202,6 @@ namespace openvpn {
 	asio_work_always_on_(false),
 	synchronous_dns_lookup(false),
 	retry_on_auth_failed_(config.retry_on_auth_failed)
-#ifdef OPENVPN_PLUGGABLE_TRANSPORTS
-	,pluggable_transports_factory(config.pluggable_transports_factory)
-#endif
 #ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
 	,extern_transport_factory(config.extern_transport_factory)
 #endif
@@ -233,7 +221,7 @@ namespace openvpn {
       rng.reset(new SSLLib::RandomAPI(false));
       prng.reset(new SSLLib::RandomAPI(true));
 
-#if (defined(ENABLE_KOVPN) || defined(ENABLE_OVPNDCO)) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
+#if defined(ENABLE_DCO) && !defined(OPENVPN_FORCE_TUN_NULL) && !defined(OPENVPN_EXTERNAL_TUN_FACTORY)
       if (config.dco)
 	dco = DCOTransport::new_controller();
 #else
@@ -728,6 +716,9 @@ namespace openvpn {
       if (relay_mode)
 	lflags |= SSLConfigAPI::LF_RELAY_MODE;
 
+      if (opt.exists("allow-name-constraints"))
+	lflags |= SSLConfigAPI::LF_ALLOW_NAME_CONSTRAINTS;
+
       // client SSL config
       SSLLib::SSLAPI::Config::Ptr cc(new SSLLib::SSLAPI::Config());
       cc->set_external_pki_callback(config.external_pki);
@@ -799,7 +790,6 @@ namespace openvpn {
 	  transconf.frame = frame;
 	  transconf.stats = cli_stats;
 	  transconf.server_addr_float = server_addr_float;
-	  transconf.socket_protect = socket_protect;
 	  transport_factory = dco->new_transport_factory(transconf);
 	}
       else if (alt_proxy)
@@ -815,18 +805,6 @@ namespace openvpn {
 	  conf.rng = rng;
 	  transport_factory = alt_proxy->new_transport_client_factory(conf);
 	}
-#ifdef OPENVPN_PLUGGABLE_TRANSPORTS
-      else if (pluggable_transports_factory) 
-	{
-	  openvpn::PluggableTransports::ClientConfig::Ptr ptconf = openvpn::PluggableTransports::ClientConfig::new_obj();
-	  ptconf->remote_list = remote_list;
-	  ptconf->frame = frame;
-	  ptconf->stats = cli_stats;
-	  ptconf->socket_protect = socket_protect;
-	  ptconf->transport = pluggable_transports_factory->new_transport_factory();
-	  transport_factory = ptconf;
-	}
-#endif
       else if (http_proxy_options)
 	{
 	  if (!transport_protocol.is_tcp())
@@ -932,9 +910,6 @@ namespace openvpn {
     ClientLifeCycle::Ptr client_lifecycle;
     AltProxy::Ptr alt_proxy;
     DCO::Ptr dco;
-#ifdef OPENVPN_PLUGGABLE_TRANSPORTS
-    PluggableTransports::Factory* pluggable_transports_factory; 
-#endif
 #ifdef OPENVPN_EXTERNAL_TRANSPORT_FACTORY
     ExternalTransport::Factory* extern_transport_factory;
 #endif

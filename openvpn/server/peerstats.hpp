@@ -29,6 +29,13 @@ namespace openvpn {
 
   struct PeerStats
   {
+    PeerStats()
+      : rx_bytes(0),
+	tx_bytes(0),
+	status(0)
+    {
+    }
+
     std::string to_string() const
     {
       std::string ret;
@@ -43,9 +50,9 @@ namespace openvpn {
       return ret;
     }
 
-    std::uint64_t rx_bytes = 0;
-    std::uint64_t tx_bytes = 0;
-    int status = 0;
+    std::uint64_t rx_bytes;
+    std::uint64_t tx_bytes;
+    int status;
   };
 
 }

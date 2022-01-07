@@ -50,14 +50,13 @@ namespace openvpn {
     }
 
     virtual CryptoDCContext::Ptr new_obj(const CryptoAlgs::Type cipher,
-					 const CryptoAlgs::Type digest,
-					 const CryptoAlgs::KeyDerivation method)
+					 const CryptoAlgs::Type digest)
     {
       const CryptoAlgs::Alg& alg = CryptoAlgs::get(cipher);
       if (alg.flags() & CryptoAlgs::CBC_HMAC)
-	return new CryptoContextCHM<CRYPTO_API>(cipher, digest, method, frame, stats, prng);
+	return new CryptoContextCHM<CRYPTO_API>(cipher, digest, frame, stats, prng);
       else if (alg.flags() & CryptoAlgs::AEAD)
-	return new AEAD::CryptoContext<CRYPTO_API>(cipher, method, frame, stats);
+	return new AEAD::CryptoContext<CRYPTO_API>(cipher, frame, stats);
       else
 	OPENVPN_THROW(crypto_dc_select, alg.name() << ": only CBC/HMAC and AEAD cipher modes supported");
     }

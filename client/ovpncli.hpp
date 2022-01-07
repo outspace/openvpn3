@@ -33,8 +33,6 @@
 #include <openvpn/pki/epkibase.hpp>
 #include <openvpn/transport/client/extern/fw.hpp>
 
-#include <openvpn/transport/client/pluggable/fw.hpp>
-
 namespace openvpn {
   class OptionList;
   class ProfileMerge;
@@ -320,9 +318,6 @@ namespace openvpn {
       // Gremlin configuration (requires that the core is built with OPENVPN_GREMLIN)
       std::string gremlinConfig;
 
-      // Use pluggable transports factory (requires that the core is build with OPENVPN_PLUGGABLE_TRANSPORTS)
-      bool usePluggableTransports = false;
-
       // Use wintun instead of tap-windows6 on Windows
       bool wintun = false;
     };
@@ -464,15 +459,21 @@ namespace openvpn {
 
     // Top-level OpenVPN client class.
     class OpenVPNClient : public TunBuilderBase,            // expose tun builder virtual methods
-			  public LogReceiver,                 // log message notification
-			  public ExternalTun::Factory,        // low-level tun override
-			  public PluggableTransports::Factory,// pluggable transport override. 
-			  public ExternalTransport::Factory,  // low-level transport override
+			  public LogReceiver,               // log message notification
+			  public ExternalTun::Factory,      // low-level tun override
+			  public ExternalTransport::Factory,// low-level transport override
 			  private ExternalPKIBase
     {
     public:
       OpenVPNClient();
       virtual ~OpenVPNClient();
+
+      // Call me first, before calling any other method (static or instance methods)
+      // in this class.
+      static void init_process();
+
+      // Release any resources allocated by init_process.
+      static void uninit_process();
 
       // Read an OpenVPN profile that might contain external
       // file references, returning a unified profile.

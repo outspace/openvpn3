@@ -294,7 +294,7 @@ namespace openvpn {
 	}
     }
 
-    virtual void pre_resolve_done() override
+    virtual void pre_resolve_done()
     {
       if (!halt)
 	new_client();
@@ -351,11 +351,11 @@ namespace openvpn {
 	}
     }
 
-    void conn_timer_start(int timeout)
+    void conn_timer_start()
     {
-      if (!conn_timer_pending && timeout > 0)
+      if (!conn_timer_pending && conn_timeout > 0)
 	{
-	  conn_timer.expires_after(Time::Duration::seconds(timeout));
+	  conn_timer.expires_after(Time::Duration::seconds(conn_timeout));
 	  conn_timer.async_wait([self=Ptr(this), gen=generation](const openvpn_io::error_code& error)
                                 {
                                   OPENVPN_ASYNC_HANDLER;
@@ -376,7 +376,7 @@ namespace openvpn {
       return true;
     }
 
-    virtual void client_proto_connected() override
+    virtual void client_proto_connected()
     {
       conn_timer.cancel();
       conn_timer_pending = false;
@@ -412,22 +412,7 @@ namespace openvpn {
                                     });
     }
 
-    virtual void client_proto_auth_pending_timeout(int timeout) override
-    {
-      if (conn_timer_pending)
-	{
-	  auto timer_left = std::chrono::duration_cast<std::chrono::seconds>(conn_timer.expiry() - AsioTimer::clock_type::now()).count();
-	  if(timer_left < timeout)
-	    {
-	      OPENVPN_LOG("Extending connection timeout from " << timer_left  << " to " << timeout << " for pending authentification");
-	      conn_timer.cancel();
-	      conn_timer_pending = false;
-	      conn_timer_start(timeout);
-	    }
-	}
-    }
-
-    virtual void client_proto_terminate() override
+    virtual void client_proto_terminate()
     {
       if (!halt)
 	{
@@ -649,28 +634,28 @@ namespace openvpn {
                                          self->server_poll_callback(gen, error);
                                        });
 	}
-      conn_timer_start(conn_timeout);
+      conn_timer_start();
       client->start();
     }
 
     // ClientLifeCycle::NotifyCallback callbacks
 
-    virtual void cln_stop() override
+    virtual void cln_stop()
     {
       thread_safe_stop();
     }
 
-    virtual void cln_pause(const std::string& reason) override
+    virtual void cln_pause(const std::string& reason)
     {
       thread_safe_pause(reason);
     }
 
-    virtual void cln_resume() override
+    virtual void cln_resume()
     {
       thread_safe_resume();
     }
 
-    virtual void cln_reconnect(int seconds) override
+    virtual void cln_reconnect(int seconds)
     {
       thread_safe_reconnect(seconds);
     }

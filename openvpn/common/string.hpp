@@ -86,8 +86,7 @@ namespace openvpn {
       return str == "1" || !strcasecmp(str.c_str(), "true");
     }
 
-    template <typename STRING>
-    inline bool starts_with(const STRING& str, const std::string& prefix)
+    inline bool starts_with(const std::string& str, const std::string& prefix)
     {
       const size_t len = str.length();
       const size_t plen = prefix.length();
@@ -97,8 +96,7 @@ namespace openvpn {
 	return false;
     }
 
-    template <typename STRING>
-    inline bool starts_with(const STRING& str, const char *prefix)
+    inline bool starts_with(const std::string& str, const char *prefix)
     {
       const size_t len = str.length();
       const size_t plen = std::strlen(prefix);
@@ -109,8 +107,7 @@ namespace openvpn {
     }
 
     // Return true if str == prefix or if str starts with prefix + delim
-    template <typename STRING>
-    inline bool starts_with_delim(const STRING& str, const std::string& prefix, const char delim)
+    inline bool starts_with_delim(const std::string& str, const std::string& prefix, const char delim)
     {
       if (prefix.length() < str.length())
 	return str[prefix.length()] == delim && string::starts_with(str, prefix);
@@ -118,8 +115,7 @@ namespace openvpn {
 	return prefix == str;
     }
 
-    template <typename STRING>
-    inline bool ends_with(const STRING& str, const std::string& suffix)
+    inline bool ends_with(const std::string& str, const std::string& suffix)
     {
       const size_t len = str.length();
       const size_t slen = suffix.length();
@@ -129,8 +125,7 @@ namespace openvpn {
 	return false;
     }
 
-    template <typename STRING>
-    inline bool ends_with(const STRING& str, const char *suffix)
+    inline bool ends_with(const std::string& str, const char *suffix)
     {
       const size_t len = str.length();
       const size_t slen = std::strlen(suffix);
@@ -141,22 +136,19 @@ namespace openvpn {
     }
 
     // return true if string ends with char c
-    template <typename STRING>
-    inline bool ends_with(const STRING& str, const char c)
+    inline bool ends_with(const std::string& str, const char c)
     {
       return str.length() && str.back() == c;
     }
 
     // return true if string ends with a newline
-    template <typename STRING>
-    inline bool ends_with_newline(const STRING& str)
+    inline bool ends_with_newline(const std::string& str)
     {
       return ends_with(str, '\n');
     }
 
     // return true if string ends with a CR or LF
-    template <typename STRING>
-    inline bool ends_with_crlf(const STRING& str)
+    inline bool ends_with_crlf(const std::string& str)
     {
       if (str.length())
 	{
@@ -231,8 +223,7 @@ namespace openvpn {
     }
 
     // remove trailing \r or \n chars
-    template <typename STRING>
-    inline void trim_crlf(STRING& str)
+    inline void trim_crlf(std::string& str)
     {
       while (ends_with_crlf(str))
 	str.pop_back();
@@ -412,20 +403,14 @@ namespace openvpn {
       return ret;
     }
 
-    // generate a string with n instances of char c
-    inline std::string repeat(const char c, int n)
+    // generate a string with spaces
+    inline std::string spaces(int n)
     {
       std::string ret;
       ret.reserve(n);
       while (n-- > 0)
-	ret += c;
+	ret += ' ';
       return ret;
-    }
-
-    // generate a string with spaces
-    inline std::string spaces(int n)
-    {
-      return repeat(' ', n);
     }
 
     // indent a multiline string

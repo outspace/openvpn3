@@ -1106,7 +1106,7 @@ int main(int argc, char* argv[])
 {
   int ret = 0;
   // process-wide initialization
-  InitProcess::Init init;
+  InitProcess::init();
 
   // set global MbedTLS debug level
 #if defined(USE_MBEDTLS)
@@ -1139,5 +1139,7 @@ int main(int argc, char* argv[])
 #endif
 
 out:
+  InitProcess::uninit();
+
   return ret;
 }

@@ -19,28 +19,20 @@
 //    along with this program in the COPYING file.
 //    If not, see <http://www.gnu.org/licenses/>.
 
-#pragma once
+// OpenVPN 3 wrapper for kovpn
 
-#include <time.h>
-#include <cstdint> // for std::uint64_t
+#ifndef OPENVPN_KOVPN_KOVPN_HPP
+#define OPENVPN_KOVPN_KOVPN_HPP
 
-namespace openvpn {
+// Not including this file causes redefinition errors
+// when the sys/ and linux/ headers below are included
+// before Asio.
+#include <openvpn/io/io.hpp>
 
-  typedef std::uint64_t nanotime_t;
+#include <sys/socket.h>
 
-  namespace TimeSpec {
-
-    inline std::uint64_t milliseconds_since_epoch(const struct timespec& ts)
-    {
-      return std::uint64_t(ts.tv_sec)  * std::uint64_t(1000)
-	   + std::uint64_t(ts.tv_nsec) / std::uint64_t(1000000);
-    }
-
-    inline nanotime_t nanoseconds_since_epoch(const struct timespec& ts)
-    {
-      return std::uint64_t(ts.tv_sec) * std::uint64_t(1000000000)
-	   + std::uint64_t(ts.tv_nsec);
-    }
-
-  }
+extern "C" {
+#include <kovpn/kovpn.h>
 }
+
+#endif

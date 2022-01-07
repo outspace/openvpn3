@@ -556,10 +556,10 @@ namespace openvpn {
 	h(u.bytes, sizeof(u.bytes));
       }
 
-#ifdef USE_OPENVPN_HASH
+#ifdef HAVE_CITYHASH
       std::size_t hashval() const
       {
-	Hash64 h;
+	HashSizeT h;
 	hash(h);
 	return h.value();
       }
@@ -850,7 +850,7 @@ namespace openvpn {
   }
 }
 
-#ifdef USE_OPENVPN_HASH
+#ifdef HAVE_CITYHASH
 OPENVPN_HASH_METHOD(openvpn::IPv6::Addr, hashval);
 #endif
 
